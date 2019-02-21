@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 # Author: Tim Wu
 # Author: Carl King
+# Author: Kamma Ron 
 
 
 # 牌型枚举
@@ -233,7 +234,7 @@ if __name__ == '__main__':
     #cache for searching solution
     raider = {}
     start = time.clock()
-    print("Please wait for the solutioni")
+    print("Please wait for the solution")
     result = hand_out(farmer, lord, raider)
     elapsed = (time.clock() - start)
 
