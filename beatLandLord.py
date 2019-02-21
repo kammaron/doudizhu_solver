@@ -3,60 +3,41 @@
 # Author: Carl King
 
 
-# 牌型枚举
 class COMB_TYPE:
     PASS, SINGLE, PAIR, TRIPLE, TRIPLE_ONE, TRIPLE_TWO, FOURTH_TWO_ONES, FOURTH_TWO_PAIRS, STRIGHT, BOMB = range(10)
 
 
-# 3-14 分别代表 3-10, J, Q, K, A
-# 16, 18, 19 分别代表 2, little_joker, big_joker
-# 将 2 与其他牌分开是为了方便计算顺子
-# 定义 HAND_PASS 为过牌
 little_joker, big_joker = 18, 19
 HAND_PASS = {'type':COMB_TYPE.PASS, 'main': 0, 'component':[]}
 
 
-# 根据当前手牌，获取此牌所有可能出的牌型
-# 牌型数据结构为 {牌类型，主牌，包含的牌}
-# 同种牌类型可以通过主牌比较大小
-# 为方便比较大小, 将顺子按照不同长度分为不同牌型
 def get_all_hands(pokers):
     if not pokers:
         return []
 
-    # 过牌
     combs = [HAND_PASS]
 
-    # 获取每个点数的数目
     dic = counter(pokers)
 
-    # 王炸
     if little_joker in pokers and big_joker in pokers:
         combs.append({'type':COMB_TYPE.BOMB, 'main': big_joker, 'component': [big_joker, little_joker]})
 
-    # 非顺子, 非王炸
     for poker in dic:
         if dic[poker] >= 1:
-            # 单张
             combs.append({'type':COMB_TYPE.SINGLE, 'main':poker, 'component':[poker]})
 
         if dic[poker] >= 2:
-            # 对子
             combs.append({'type':COMB_TYPE.PAIR, 'main':poker, 'component':[poker, poker]})
 
         if dic[poker] >= 3:
-            # 三带零
             combs.append({'type':COMB_TYPE.TRIPLE, 'main':poker, 'component':[poker, poker, poker]})
             for poker2 in dic:
                 if ALLOW_THREE_ONE and dic[poker2] >= 1 and poker2 != poker:
-                    # 三带一
                     combs.append({'type':COMB_TYPE.TRIPLE_ONE, 'main':poker, 'component': [poker, poker, poker, poker2]})
                 if ALLOW_THREE_TWO and dic[poker2] >= 2 and poker2 != poker:
-                    # 三带二
                     combs.append({'type':COMB_TYPE.TRIPLE_TWO, 'main':poker, 'component': [poker, poker, poker, poker2, poker2]})
 
         if dic[poker] == 4:
-            # 炸弹
             combs.append({'type':COMB_TYPE.BOMB, 'main':poker, 'component': [poker, poker, poker, poker]})
             if ALLOW_FOUR_TWO:
                 pairs = []
@@ -67,13 +48,11 @@ def get_all_hands(pokers):
                     elif dic[poker2] == 2:
                         pairs.append(poker2)
 
-                # 四带二单
                 for i in range(len(ones)):
                     for j in range(i + 1, len(ones)):
                         combs.append({'type':COMB_TYPE.FOURTH_TWO_ONES, 'main':poker, \
                             'component':[poker, poker, poker, poker, ones[i], ones[j]]})
 
-                # 四带二对
                 for i in range(len(pairs)):
                     combs.append({'type':COMB_TYPE.FOURTH_TWO_ONES, 'main':poker, \
                         'component': [poker, poker, poker, poker, pairs[i], pairs[i]]})
@@ -81,17 +60,12 @@ def get_all_hands(pokers):
                         combs.append({'type':COMB_TYPE.FOURTH_TWO_PAIRS, 'main':poker, \
                             'component': [poker, poker, poker, poker, pairs[i], pairs[i], pairs[j], pairs[j]]})
 
-    # 所有顺子组合
-    # 以 COMB_TYPE.STRIGHT * len(straight) 标志顺子牌型, 不同长度的顺子是不同的牌型
     for straight in create_straight(list(set(pokers)), 5):
         combs.append({'type':COMB_TYPE.STRIGHT * len(straight), 'main': straight[0], 'component': straight})
 
-    # 返回所有可能的出牌类型
     return combs
 
 
-
-# 根据列表创建顺子
 def create_straight(list_of_nums, min_length):
     a = sorted(list_of_nums)
     lens = len(a)
@@ -104,7 +78,6 @@ def create_straight(list_of_nums, min_length):
 
 
 
-# 统计列表中每个元素的个数
 def counter(pokers):
     dic = {}
     for poker in pokers:
@@ -113,10 +86,6 @@ def counter(pokers):
 
 
 
-# comb1 先出，问后出的 comb2 是否能打过 comb1
-# 1. 同种牌型比较 main 值, main 值大的胜
-# 2. 炸弹大过其他牌型
-# 3. 牌型不同, 后出为负
 def can_beat(comb1, comb2):
     if not comb2 or comb2['type'] == COMB_TYPE.PASS:
         return False
@@ -132,9 +101,11 @@ def can_beat(comb1, comb2):
         return False
 
 
+def make_bare_hand(pokers, hand):
+    for poker in hand:
+        pokers.remove(poker)
 
-# 给定 pokers，求打出手牌 hand 后的牌
-# 用 component 字段标志打出的牌, 可以方便地统一处理
+
 def make_hand(pokers, hand):
     poker_clone = pokers[:]
     for poker in hand['component']:
@@ -142,48 +113,34 @@ def make_hand(pokers, hand):
     return poker_clone
 
 
-def make_bare_hand(pokers, hand):
-    for poker in hand:
-        pokers.remove(poker)
 
-
-
-# 模拟每次出牌, my_pokers 为当前我的牌, enemy_pokers 为对手的牌
-# raider 为当前情况下出什么牌可以赢， last_hand 为上一手对手出的牌, cache 用于缓存牌局与胜负关系
 def hand_out(my_pokers, enemy_pokers, raider, last_hand = None, cache = {}):
-    # 牌局终止的边界条件
     if not my_pokers:
         return True
         
     if not enemy_pokers:
         return False
 
-    # 如果上一手为空, 则将上一手赋值为 HAND_PASS
     if last_hand is None:
         last_hand = HAND_PASS
 
-    # 从缓存中读取数据
     key = str((my_pokers, enemy_pokers, last_hand['component']))
     if key in cache:
         return cache[key]
 
-    # 模拟出牌过程, 深度优先搜索, 找到赢的分支则返回 True
     for current_hand in get_all_hands(my_pokers):
-        # 转换出牌权有两种情况: 
-        # 1. 当前手胜出, 则轮到对方选择出牌
-        # 2. 当前手 PASS, 且对方之前没有 PASS, 则轮到对方出牌
         if can_beat(last_hand, current_hand) or \
         (last_hand['type'] != COMB_TYPE.PASS and current_hand['type'] == COMB_TYPE.PASS):
             if not hand_out(enemy_pokers, make_hand(my_pokers, current_hand), raider, current_hand, cache):
+                # print(True,' :', key)
+                # print(key,current_hand)
                 raider[key] = current_hand
                 cache[key] = True
                 return True
 
-    # 遍历所有情况, 均无法赢, 则返回 False
     # print(False, ':', key)
     cache[key] = False
     return False
-
 
 def trans(c):
     return {
@@ -197,8 +154,6 @@ def trans(c):
             'W':19
             }.get(c)
 
-# input function input cards as a string
-# t for 10, W and w for Joker
 def get_input(vec):
     s = input()
     for i in range(len(s)):
@@ -208,51 +163,53 @@ def get_input(vec):
             vec.append(trans(s[i]))
 
 
-
-
 if __name__ == '__main__':
     import time
+    start = time.clock()
 
-    # 残局1
-    # 是否允许三带一
     ALLOW_THREE_ONE = True
-    # 是否允许三带二
-    ALLOW_THREE_TWO = False
-    # 是否允许四带二
+    ALLOW_THREE_TWO = True
     ALLOW_FOUR_TWO = True
 
     lord = []
     farmer = []
-    print('input computer\'s cards')
+    print('input lord\'s cards')
     get_input(lord)
-    print("computer's cards: {}".format(lord))
-    print('input your cards')
+    print(lord)
+    print('input farmer\'s cards')
     get_input(farmer)
-    print("your cards: {}".format(farmer))
     print(farmer)
-    #cache for searching solution
+    #print("first hand or not? 1 for first, 0 for not")
+    #first = int(input())
+    #if first == 0:
+    #    to_beat=[]
+    #    get_input(to_beat)
+    #    combs = get_all_hands(to_beat)
+    #    result = hand_out(farmer, lord, combs[1])
+    #else:
     raider = {}
-    start = time.clock()
     result = hand_out(farmer, lord, raider)
+
+
     elapsed = (time.clock() - start)
 
-    print("Solve result:", result)
-    print("Time elapsed:", elapsed)
-
-    if result:
+    print("Result:", result)
+    print("Elapsed:", elapsed)
+    
+    #finish the game
+    last_hand = []
+    while farmer:
+        key = str((farmer, lord, last_hand))
+        my_hand = raider[key]['component']
+        print('please play:', str(my_hand))
+        make_bare_hand(farmer, my_hand)
+        if not farmer:
+            break
+        print('input lord\'s hand:')
         last_hand = []
-        while farmer:
-            key = str((farmer, lord, last_hand))
-            my_hand = raider[key]['component']
-            print('please play:', str(my_hand))
-            make_bare_hand(farmer, my_hand)
-            if not farmer:
-                break
-            print('input computer\'s hand:')
-            last_hand = []
-            get_input(last_hand)
-            make_bare_hand(lord, last_hand)
-        
-        print('finished!')
+        get_input(last_hand)
+        make_bare_hand(lord, last_hand)
+
+    print('finished!')
 
 
