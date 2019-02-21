@@ -233,6 +233,7 @@ if __name__ == '__main__':
     #cache for searching solution
     raider = {}
     start = time.clock()
+    print("Please wait for the solutioni")
     result = hand_out(farmer, lord, raider)
     elapsed = (time.clock() - start)
 
