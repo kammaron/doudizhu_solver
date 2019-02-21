@@ -2,10 +2,10 @@
 Forked from iWoz, 针对欢乐斗地主残局
 
 ## Usage
-First input computer's cards.
-Then input yours.
-Wait for the solution for a while.
-Then can play under the output guideness.
+1. First input computer's cards as a string, W for Joker King, w for joker, t for 10, j for 11, q for 12, k for 13, other number as usual. 
+2. Then input yours.
+3. Wait for the solution for a while.
+4. Then can play under the output guideness.
 
 ## New feature
 Cache the solution in the search process
